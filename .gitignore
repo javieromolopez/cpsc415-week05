@@ -1,0 +1,24 @@
+# secrets and local agent settings
+.env
+.env.*
+.claude/settings.local.json
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# build output, any language
+node_modules/
+dist/
+build/
+target/
+out/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.gradle/
+bin/
+obj/
