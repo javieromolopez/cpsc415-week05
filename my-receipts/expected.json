@@ -1,0 +1,14 @@
+{
+	"receipt-06.jpg": {
+		"merchant": "Uber Eats",
+		"date": "2026-10-22",
+		"items": 2,
+		"total": 13.53,
+	},
+	"receipt-07.jpg": {
+		"merchant": "Uber Eats",
+		"date": "2026-09-11",
+		"items": 6,
+		"total": 90.34,
+	}
+}

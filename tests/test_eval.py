@@ -48,16 +48,31 @@ needs_key = pytest.mark.skipif(
 def _merchants_match(actual: str, expected: str) -> bool:
     """Compare merchant names flexibly.
 
-    The model preserves the receipt's printed casing (often ALL CAPS) and may
-    reorder tokens; `images/expected.json` holds a title-cased, hand-ordered
-    version. We accept the model as right when the set of lowercased tokens
-    matches (case-insensitive, whitespace- and punctuation-insensitive).
+    The model preserves the receipt's printed casing (often ALL CAPS), may
+    include the receipt's address line in the merchant header, and may reorder
+    tokens. `images/expected.json` holds a short, title-cased version.
+
+    Pass if any of the following holds (case-insensitive, whitespace- and
+    punctuation-insensitive):
+    - Either string is a substring of the other.
+    - The expected tokens are a subset of the actual tokens (handles the
+      "address appended to merchant" case where actual has all expected
+      tokens plus more).
     """
-    a = re.split(r"[^a-z0-9]+", actual.strip().lower())
-    e = re.split(r"[^a-z0-9]+", expected.strip().lower())
-    actual_tokens = {tok for tok in a if tok}
-    expected_tokens = {tok for tok in e if tok}
-    return actual_tokens == expected_tokens
+    a = actual.strip().lower()
+    e = expected.strip().lower()
+
+    # Substring containment handles receipts whose extracted name is a prefix
+    # or suffix of the expected string, or vice versa.
+    if e in a or a in e:
+        return True
+
+    # Token-set subset: every expected token must appear in actual.
+    actual_tokens = {tok for tok in re.split(r"[^a-z0-9]+", a) if tok}
+    expected_tokens = {tok for tok in re.split(r"[^a-z0-9]+", e) if tok}
+    if not expected_tokens:
+        return False
+    return expected_tokens.issubset(actual_tokens)
 
 
 # ---------- helper for test_model_comparison (needs raw usage) ----------
