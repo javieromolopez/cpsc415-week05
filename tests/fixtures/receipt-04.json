@@ -1,0 +1,14 @@
+{
+  "merchant": "Hartford Hardware",
+  "date": "2026-10-04",
+  "items": [
+    {"name": "Drill Bit Set", "quantity": 1, "unit_price": 12.99},
+    {"name": "Wood Screws", "quantity": 1, "unit_price": 4.50},
+    {"name": "Sandpaper", "quantity": 2, "unit_price": 3.75},
+    {"name": "Tape Measure", "quantity": 1, "unit_price": 7.01}
+  ],
+  "subtotal": 32.00,
+  "discount": 0.50,
+  "tax": 2.02,
+  "total": 33.52
+}

@@ -1,0 +1,13 @@
+{
+  "merchant": "Long Walk Coffee",
+  "date": "2026-10-06",
+  "items": [
+    {"name": "Latte", "quantity": 1, "unit_price": 4.75},
+    {"name": "Croissant", "quantity": 1, "unit_price": 3.25},
+    {"name": "Espresso", "quantity": 2, "unit_price": 1.25}
+  ],
+  "subtotal": 10.50,
+  "discount": 0.0,
+  "tax": 0.51,
+  "total": 11.01
+}

@@ -1,0 +1,13 @@
+{
+  "merchant": "Mather Dining Hall",
+  "date": "2026-10-02",
+  "items": [
+    {"name": "Egg Sandwich", "quantity": 1, "unit_price": 5.99},
+    {"name": "Coffee", "quantity": 1, "unit_price": 2.50},
+    {"name": "Bagel", "quantity": 1, "unit_price": 4.71}
+  ],
+  "subtotal": 13.20,
+  "discount": 0.0,
+  "tax": 0.46,
+  "total": 13.66
+}

@@ -1,0 +1,14 @@
+[project]
+name = "receipts"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not eval'"
+markers = [
+    "eval: marks tests that require a real model call (skipped by default; opt in with `pytest -m eval`)",
+]

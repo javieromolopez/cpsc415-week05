@@ -1,0 +1,13 @@
+{
+  "merchant": "CS Club Bake Sale",
+  "date": null,
+  "items": [
+    {"name": "Brownie", "quantity": 2, "unit_price": 2.00},
+    {"name": "Cookie", "quantity": 1, "unit_price": 1.50},
+    {"name": "Cupcake", "quantity": 1, "unit_price": 1.00}
+  ],
+  "subtotal": 6.50,
+  "discount": 0.0,
+  "tax": 0.0,
+  "total": 6.50
+}
