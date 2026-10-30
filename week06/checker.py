@@ -208,3 +208,50 @@ def build_report(answer_key: dict, critique: dict) -> Report:
 
     verdict = "PASS" if all(r.is_ok for r in rows) else "FAIL"
     return Report(verdict=verdict, rows=rows)
+
+
+# ============================================================================
+# Inter-critic comparison (Spec §23)
+# ============================================================================
+
+@dataclass(frozen=True)
+class Disagreement:
+    """A part where two critics gave different critiqued values (Spec §23).
+
+    `value_a` and `value_b` are the critiqued values from each critic.
+    If a part is present in one report but not the other, the missing
+    side's value is `None` — the structural difference is itself a
+    disagreement (one critic invented; the other un-answered, or
+    coverage differed).
+    """
+    part: str
+    value_a: object | None  # bool | str | None
+    value_b: object | None  # bool | str | None
+
+
+def compare_critics(report_a: Report, report_b: Report) -> list[Disagreement]:
+    """Find every part where the two critics gave different critiqued values.
+
+    Spec §23: a disagreement between critics is reported as "critic
+    uncertainty" *alongside* the hand-coded key check, never *instead of*
+    it. This function does not modify either report's per-image verdict;
+    it returns a list of `Disagreement` rows that the CLI prints under
+    the per-part table.
+
+    The union of both reports' part sets is checked — a part present in
+    only one report is a disagreement (`None` on the missing side).
+    """
+    parts_a = {row.part: row.critiqued for row in report_a.rows}
+    parts_b = {row.part: row.critiqued for row in report_b.rows}
+    all_parts = sorted(set(parts_a) | set(parts_b))
+
+    disagreements: list[Disagreement] = []
+    for part in all_parts:
+        value_a = parts_a.get(part)
+        value_b = parts_b.get(part)
+        if value_a != value_b:
+            disagreements.append(
+                Disagreement(part=part, value_a=value_a, value_b=value_b)
+            )
+
+    return disagreements
