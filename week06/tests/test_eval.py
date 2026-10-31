@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from pydantic import SecretStr
 
 from week06.checker import build_report, compare_critics
 from week06.critique import build_critique_prompt, critique_image
@@ -65,8 +66,16 @@ def prompts() -> list[dict]:
 
 
 @pytest.fixture(scope="module")
-def api_key() -> str:
-    return os.environ["OPENROUTER_API_KEY"]
+def api_key() -> SecretStr:
+    """The OpenRouter API key wrapped in `SecretStr`.
+
+    `SecretStr` overrides both `__repr__` and `__str__` to hide the
+    value, so if pytest prints the fixture locals on a failure, the
+    key is not leaked. Use `.get_secret_value()` at the call site to
+    extract the raw string. Pydantic is already a transitive dep of
+    the `openrouter` SDK, so no new dependency is added.
+    """
+    return SecretStr(os.environ["OPENROUTER_API_KEY"])
 
 
 @pytest.fixture(scope="module")
@@ -86,13 +95,14 @@ def generated_images(prompts, api_key, eval_dir) -> list[dict]:
     (the `GeneratedImage` returned by the API), `prompt`, `seed`,
     `answer_key`.
     """
+    key = api_key.get_secret_value()
     rows = []
     for entry in prompts:
         gen = generate_image(
             prompt=entry["prompt"],
             seed=entry["seed"],
             model=PRIMARY_IMAGE_MODEL,
-            api_key=api_key,
+            api_key=key,
         )
         path = eval_dir / "images" / f"{entry['id']}.png"
         path.write_bytes(gen.data)
@@ -110,6 +120,7 @@ def generated_images(prompts, api_key, eval_dir) -> list[dict]:
 @pytest.fixture(scope="module")
 def primary_critiques(generated_images, api_key) -> list[tuple[dict, object]]:
     """Run the primary critic (`minimax/minimax-m3`) on all 5 images."""
+    key = api_key.get_secret_value()
     return [
         (
             entry,
@@ -117,7 +128,7 @@ def primary_critiques(generated_images, api_key) -> list[tuple[dict, object]]:
                 image_path=str(entry["image_path"]),
                 prompt=build_critique_prompt(entry["prompt"], entry["answer_key"]),
                 model=PRIMARY_CRITIC_MODEL,
-                api_key=api_key,
+                api_key=key,
             ),
         )
         for entry in generated_images
@@ -127,6 +138,7 @@ def primary_critiques(generated_images, api_key) -> list[tuple[dict, object]]:
 @pytest.fixture(scope="module")
 def comparison_critiques(generated_images, api_key) -> list[tuple[dict, object]]:
     """Run the comparison critic (`xiaomi/mimo-v2.6-flash`) on all 5 images."""
+    key = api_key.get_secret_value()
     return [
         (
             entry,
@@ -134,7 +146,7 @@ def comparison_critiques(generated_images, api_key) -> list[tuple[dict, object]]
                 image_path=str(entry["image_path"]),
                 prompt=build_critique_prompt(entry["prompt"], entry["answer_key"]),
                 model=COMPARISON_CRITIC_MODEL,
-                api_key=api_key,
+                api_key=key,
             ),
         )
         for entry in generated_images
@@ -155,19 +167,28 @@ class TestGeneration:
                 f"for {entry['id']}"
             )
 
-    def test_comparison_image_model_sanity(self, prompts, api_key):
-        """1 Gemini generation — sanity check that the model + endpoint work."""
+    def test_comparison_image_model_sanity(self, prompts, api_key, eval_dir):
+        """1 Gemini generation — sanity check that the model + endpoint work.
+
+        The Gemini image is persisted to `<eval_dir>/images/<id>.gemini.png`
+        alongside the primary artifacts, so a grader can compare the
+        same prompt rendered by two image models.
+        """
         entry = prompts[0]
         gen = generate_image(
             prompt=entry["prompt"],
             seed=entry["seed"],
             model=COMPARISON_IMAGE_MODEL,
-            api_key=api_key,
+            api_key=api_key.get_secret_value(),
         )
         assert gen.data, "empty image data from Gemini"
         assert gen.media_type.startswith("image/"), (
             f"unexpected media type {gen.media_type} from Gemini"
         )
+
+        # Persist the Gemini sanity image next to the FLUX ones.
+        sanity_path = eval_dir / "images" / f"{entry['id']}.gemini.png"
+        sanity_path.write_bytes(gen.data)
 
 
 # ============================================================================
