@@ -1,0 +1,59 @@
+[
+  {
+    "id": "plant-cell",
+    "prompt": "Flat-color 2D textbook illustration of a plant cell. Solid color fills, clean labels. Show the cell wall, nucleus, chloroplasts, mitochondria, and central vacuole, with arrows pointing to each part and the part names written in clear text.",
+    "seed": 42,
+    "answer_key": {
+      "cell_wall": true,
+      "nucleus": true,
+      "chloroplast": true,
+      "mitochondria": true,
+      "vacuole": true
+    }
+  },
+  {
+    "id": "animal-cell",
+    "prompt": "Flat-color 2D textbook illustration of an animal cell. Solid color fills, clean labels. Show the cell membrane, nucleus, mitochondria, and cytoplasm, with arrows pointing to each part and the part names written in clear text.",
+    "seed": 43,
+    "answer_key": {
+      "cell_membrane": true,
+      "nucleus": true,
+      "mitochondria": true,
+      "cytoplasm": true
+    }
+  },
+  {
+    "id": "simple-circuit",
+    "prompt": "Flat-color 2D textbook illustration of a simple electric circuit. Solid color fills, clean labels. Show a battery, two wires connecting the battery to a light bulb, and a closed switch, with arrows pointing to each component and the component names written in clear text.",
+    "seed": 44,
+    "answer_key": {
+      "battery": true,
+      "wire": true,
+      "light_bulb": true,
+      "switch": true
+    }
+  },
+  {
+    "id": "flower",
+    "prompt": "Flat-color 2D textbook illustration of a complete flower (whole plant including stem and leaves). Solid color fills, clean labels. Show the petal, stem, leaf, pistil, and stamen, with arrows pointing to each part and the part names written in clear text.",
+    "seed": 45,
+    "answer_key": {
+      "petal": true,
+      "stem": true,
+      "leaf": true,
+      "pistil": true,
+      "stamen": true
+    }
+  },
+  {
+    "id": "water-cycle",
+    "prompt": "Flat-color 2D textbook illustration of the water cycle. Solid color fills, clean labels. Show evaporation (water vapor rising from a body of water), condensation (clouds forming), precipitation (rain falling), and collection (water collecting in a body of water), with arrows connecting the stages and the stage names written in clear text.",
+    "seed": 46,
+    "answer_key": {
+      "evaporation": true,
+      "condensation": true,
+      "precipitation": true,
+      "collection": true
+    }
+  }
+]
