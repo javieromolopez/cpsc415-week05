@@ -174,7 +174,7 @@ def process_entry(entry: dict, model: str, api_key: str) -> dict:
     """
     image_path = entry["image_path"]
     diagram_prompt = entry["prompt"]
-    answer_key = entry["answer_key"]
+    answer_key = entry.get("answer_key", {})
     entry_id = entry.get("id", "<unknown>")
 
     critique_prompt = build_critique_prompt(diagram_prompt, answer_key)
@@ -234,37 +234,115 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Critique Week 6 diagrams against the hand-coded answer key. "
             "Prints per-image PASS/FAIL + per-part table; writes a per-critic "
-            "report JSON to --out."
+            "report JSON to --out. Or compare two existing reports with --compare."
         ),
     )
     parser.add_argument(
         "--model",
-        required=True,
-        help="Vision model slug (e.g., minimax/minimax-m3).",
+        help="Vision model slug (e.g., minimax/minimax-m3). Required unless --compare.",
     )
     parser.add_argument(
         "--out",
-        required=True,
-        help="Path to the per-critic report JSON. Refuses to overwrite.",
+        help="Path to the per-critic report JSON. Required unless --compare. Refuses to overwrite.",
     )
     parser.add_argument(
         "input",
-        help="Path to prompts.json (manifest.json support is in a future commit).",
+        nargs="?",
+        default=None,
+        help="Path to prompts.json. Required unless --compare.",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help=(
+            "Offline mode: compare two existing per-critic report JSONs and "
+            "print every inter-critic disagreement. Requires --report-a and "
+            "--report-b; --model, --out, and the input positional are not "
+            "needed."
+        ),
+    )
+    parser.add_argument(
+        "--report-a",
+        help="First report JSON path (used with --compare).",
+    )
+    parser.add_argument(
+        "--report-b",
+        help="Second report JSON path (used with --compare).",
     )
     return parser
+
+
+def run_compare(report_a_path: str, report_b_path: str) -> int:
+    """Compare two per-critic report JSONs and print every inter-critic disagreement.
+
+    The lab surfaces disagreement; it does not fail on it. Returns 0
+    even when disagreements are found (Spec §23: "the code does not
+    require the critics to agree with each other").
+
+    Returns 1 only on I/O errors (could not read the reports).
+    """
+    try:
+        report_a = json.loads(Path(report_a_path).read_text(encoding="utf-8"))
+        report_b = json.loads(Path(report_b_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"FAIL — could not read reports: {e}", file=sys.stderr)
+        return 1
+
+    entries_a = {e["id"]: e for e in report_a.get("entries", [])}
+    entries_b = {e["id"]: e for e in report_b.get("entries", [])}
+    all_ids = sorted(set(entries_a) | set(entries_b))
+    total = 0
+
+    for entry_id in all_ids:
+        e_a = entries_a.get(entry_id)
+        e_b = entries_b.get(entry_id)
+        if e_a is None or e_b is None:
+            print(f"  ? {entry_id}: present in only one report")
+            total += 1
+            continue
+
+        parts_a = {r["part"]: r.get("critiqued") for r in e_a.get("rows", [])}
+        parts_b = {r["part"]: r.get("critiqued") for r in e_b.get("rows", [])}
+        all_parts = sorted(set(parts_a) | set(parts_b))
+
+        disagreements = [
+            (part, parts_a.get(part), parts_b.get(part))
+            for part in all_parts
+            if parts_a.get(part) != parts_b.get(part)
+        ]
+
+        if disagreements:
+            total += len(disagreements)
+            print(f"  {entry_id}: {len(disagreements)} disagreement(s)")
+            for part, va, vb in disagreements:
+                print(f"    {part}: A={va!r} B={vb!r}")
+        else:
+            print(f"  {entry_id}: critics agree")
+
+    print(f"\nTotal inter-critic disagreements: {total}")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point. Returns the process exit code (0 or 1).
 
-    Order of checks (Spec §24 + Spec §9):
-        1. argparse — handles `--help` and missing required args.
-        2. `--out` overwrite guard — refuse before any API call.
-        3. `OPENROUTER_API_KEY` — refuse before any API call.
-        4. Read `prompts.json`.
-        5. For each entry: critique, build report, print.
-        6. Write the on-disk report.
-        7. Return 0 if every image PASS, 1 otherwise.
+    Two modes:
+        1. Critique mode (default): critique images against the answer
+           key. Requires --model, --out, and an input positional.
+        2. Compare mode (--compare): compare two existing report JSONs
+           offline. Requires --report-a and --report-b; --model, --out,
+           and the input positional are NOT needed.
+
+    Order of checks for critique mode (Spec §24 + Spec §9):
+        1. argparse — handles `--help`.
+        2. Manual required-args check (since --model/--out/input are
+           conditionally required).
+        3. `--out` overwrite guard — refuse before any API call.
+        4. `OPENROUTER_API_KEY` — refuse before any API call.
+        5. Read `prompts.json`.
+        6. For each entry: critique, build report, print.
+        7. Write the on-disk report.
+        8. Return 0 if every image PASS, 1 otherwise.
     """
     parser = build_parser()
     try:
@@ -273,6 +351,33 @@ def main(argv: list[str] | None = None) -> int:
         # argparse calls sys.exit() on --help (0) or on error (2). Map
         # to the CLI's 0/1 contract.
         return 0 if e.code == 0 else 1
+
+    # Compare mode: --model/--out/input NOT required.
+    if args.compare:
+        if not args.report_a or not args.report_b:
+            print(
+                "FAIL — --compare requires both --report-a and --report-b",
+                file=sys.stderr,
+            )
+            return 1
+        return run_compare(args.report_a, args.report_b)
+
+    # Critique mode: validate required args manually (they're optional
+    # in argparse so the --compare branch can omit them).
+    missing: list[str] = []
+    if not args.model:
+        missing.append("--model")
+    if not args.out:
+        missing.append("--out")
+    if not args.input:
+        missing.append("input")
+    if missing:
+        print(
+            f"FAIL — missing required args: {', '.join(missing)} "
+            f"(or pass --compare for offline report comparison)",
+            file=sys.stderr,
+        )
+        return 1
 
     # --out overwrite guard (before any API call).
     if Path(args.out).exists():
@@ -318,3 +423,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     return 0 if not any_failed else 1
+if __name__ == "__main__":
+    import sys
+    # Assuming the agent named the CLI entry point 'main'
+    sys.exit(main())

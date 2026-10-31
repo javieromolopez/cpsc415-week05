@@ -128,13 +128,18 @@ def write_manifest(path: Path, manifest: list[dict]) -> None:
 def process_entry(entry: dict, model: str, api_key: str) -> tuple[GeneratedImage, dict]:
     """Generate one image; return `(image, manifest_row)`.
 
-    The manifest row carries `id`, `prompt`, `seed`, `model`, and a
-    relative `image_path`. `media_type` and `cost_usd` come from the
+    The manifest row carries `id`, `prompt`, `seed`, `answer_key`,
+    `model`, and a relative `image_path`. `answer_key` is included so
+    the manifest is self-contained — downstream consumers (the
+    Critic-checker, the `--compare` mode) can read the checklist
+    straight from the manifest without needing the original
+    `prompts.json`. `media_type` and `cost_usd` come from the
     `GeneratedImage`.
     """
     entry_id = entry["id"]
     prompt = entry["prompt"]
     seed = entry["seed"]
+    answer_key = entry.get("answer_key", {})
 
     result = generate_image(prompt, seed, model, api_key)
 
@@ -142,6 +147,7 @@ def process_entry(entry: dict, model: str, api_key: str) -> tuple[GeneratedImage
         "id": entry_id,
         "prompt": prompt,
         "seed": seed,
+        "answer_key": answer_key,
         "model": model,
         "image_path": f"images/{entry_id}.png",
         "media_type": result.media_type,
@@ -247,3 +253,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"PASS — wrote {len(manifest)} images + manifest to {images_dir}")
     return 0
+if __name__ == "__main__":
+    import sys
+    # Assuming the agent named the CLI entry point 'main'
+    sys.exit(main())

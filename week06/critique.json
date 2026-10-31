@@ -1,0 +1,183 @@
+{
+  "model": "minimax/minimax-m3",
+  "verdict": "PASS",
+  "entries": [
+    {
+      "id": "plant-cell",
+      "model": "minimax/minimax-m3",
+      "verdict": "PASS",
+      "rows": [
+        {
+          "part": "cell_wall",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "nucleus",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "chloroplast",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "mitochondria",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "vacuole",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        }
+      ],
+      "critique_failed": false,
+      "critique_excerpt": null
+    },
+    {
+      "id": "animal-cell",
+      "model": "minimax/minimax-m3",
+      "verdict": "PASS",
+      "rows": [
+        {
+          "part": "cell_membrane",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "nucleus",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "mitochondria",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "cytoplasm",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        }
+      ],
+      "critique_failed": false,
+      "critique_excerpt": null
+    },
+    {
+      "id": "simple-circuit",
+      "model": "minimax/minimax-m3",
+      "verdict": "PASS",
+      "rows": [
+        {
+          "part": "battery",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "wire",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "light_bulb",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "switch",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        }
+      ],
+      "critique_failed": false,
+      "critique_excerpt": null
+    },
+    {
+      "id": "flower",
+      "model": "minimax/minimax-m3",
+      "verdict": "PASS",
+      "rows": [
+        {
+          "part": "petal",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "stem",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "leaf",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "pistil",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "stamen",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        }
+      ],
+      "critique_failed": false,
+      "critique_excerpt": null
+    },
+    {
+      "id": "water-cycle",
+      "model": "minimax/minimax-m3",
+      "verdict": "PASS",
+      "rows": [
+        {
+          "part": "evaporation",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "condensation",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "precipitation",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        },
+        {
+          "part": "collection",
+          "expected": true,
+          "critiqued": true,
+          "match": "\u2713"
+        }
+      ],
+      "critique_failed": false,
+      "critique_excerpt": null
+    }
+  ]
+}
