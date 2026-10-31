@@ -26,15 +26,21 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import httpx
+
 # ============================================================================
-# Module-level type + function (stubbed by tests)
+# Module-level type + function
 # ============================================================================
+
+OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+
 
 @dataclass(frozen=True)
 class GeneratedImage:
@@ -57,15 +63,42 @@ def generate_image(
 ) -> GeneratedImage:
     """Call the OpenRouter Image API and return the image data + metadata.
 
-    The only function that touches the network. Tests stub it via
-    `monkeypatch.setattr(week06.generate, "generate_image", ...)` so
-    the CLI can be exercised offline. The real implementation lands in
-    a future commit; for now it raises `NotImplementedError`, which
-    `main` surfaces as a structured FAIL row rather than a crash.
+    The only function that touches the network for image generation.
+    Tests stub it via `monkeypatch.setattr(week06.generate,
+    "generate_image", ...)` so the CLI can be exercised offline.
+
+    Implementation note: uses `httpx` directly to keep the call site
+    small (~15 lines). The `openrouter` PyPI SDK exposes the same
+    endpoint via `client.images.generate(...)` with a more verbose
+    typed signature; either is fine. `httpx` is already a transitive
+    dep of `openrouter`, so no new package is needed.
     """
-    raise NotImplementedError(
-        "generate_image is not implemented in this commit; "
-        "use a stub for offline tests."
+    body = {"model": model, "prompt": prompt, "seed": seed}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    with httpx.Client(timeout=60.0) as client:
+        resp = client.post(
+            f"{OPENROUTER_BASE}/images/generations",
+            json=body,
+            headers=headers,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+
+    image_obj = payload["data"][0]
+    raw_bytes = base64.b64decode(image_obj["b64_json"])
+
+    cost = None
+    usage = payload.get("usage") or {}
+    if "cost" in usage and usage["cost"] is not None:
+        cost = float(usage["cost"])
+
+    return GeneratedImage(
+        data=raw_bytes,
+        media_type=image_obj.get("media_type") or "image/png",
+        cost_usd=cost,
     )
 
 

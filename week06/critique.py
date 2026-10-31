@@ -24,30 +24,104 @@ non-JSON critique (Spec §17), with the reason surfaced in the report.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import sys
 from pathlib import Path
 
-from week06.checker import ParseResult, build_report
+import httpx
+
+from week06.checker import ParseResult, build_report, parse_critique
 
 # ============================================================================
-# Module-level function (stubbed by tests)
+# Module-level function (stubbed by tests; real impl below)
 # ============================================================================
+
+OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+
+
+def build_critique_prompt(diagram_prompt: str, answer_key: dict) -> str:
+    """Build the prompt sent to the vision model.
+
+    Combines the diagram description with a per-part checklist and a
+    JSON-only output instruction. The model is asked to return a JSON
+    object whose keys are the part names from `answer_key` and whose
+    values are booleans (true = present, false = absent).
+    """
+    parts = list(answer_key.keys())
+    parts_list = "\n".join(f"- {p}" for p in parts)
+    example_json = "{" + ", ".join(f'"{p}": true' for p in parts) + "}"
+    return (
+        f"{diagram_prompt}\n\n"
+        "Look carefully at the image. For each part below, decide "
+        "whether it is present (true) or absent (false) in the diagram.\n\n"
+        f"Parts to check:\n{parts_list}\n\n"
+        "Return your answer as JSON only — no prose, no markdown fences. "
+        f"One boolean key per part, exactly matching these names. "
+        f"Example format:\n{example_json}"
+    )
+
 
 def critique_image(image_path: str, prompt: str, model: str, api_key: str) -> ParseResult:
-    """Send an image + prompt to the vision model and parse the JSON reply.
+    """Send an image + critique prompt to the vision model and parse the JSON reply.
 
-    The only function that touches the network. Tests stub it via
-    `monkeypatch.setattr(week06.critique, "critique_image", ...)` so the
-    CLI can be exercised offline. The real implementation lands in a
-    future commit; for now it raises `NotImplementedError`, which the
-    CLI surfaces as a structured FAIL row rather than a crash.
+    The only function that touches the network for critique. Tests stub
+    it via `monkeypatch.setattr(week06.critique, "critique_image", ...)`
+    so the CLI can be exercised offline.
+
+    `prompt` is the full critique prompt — the caller is responsible
+    for building it (use `build_critique_prompt` for the standard
+    checklist shape). The function encodes the image as a base64 data
+    URL and posts to the chat-completions endpoint with the OpenAI-
+    compatible multimodal `content` list.
+
+    Implementation note: uses `httpx` directly. The `openrouter` SDK's
+    `chat.send(...)` does the same thing with a more verbose typed
+    signature; `httpx` is already a transitive dep of `openrouter`.
     """
-    raise NotImplementedError(
-        "critique_image is not implemented in this commit; "
-        "use a stub for offline tests."
-    )
+    image_bytes = Path(image_path).read_bytes()
+    image_b64 = base64.b64encode(image_bytes).decode("ascii")
+
+    body = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{image_b64}",
+                        },
+                    },
+                ],
+            }
+        ],
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    with httpx.Client(timeout=60.0) as client:
+        resp = client.post(
+            f"{OPENROUTER_BASE}/chat/completions",
+            json=body,
+            headers=headers,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+
+    try:
+        content = payload["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        return ParseResult.fail("empty", excerpt="<unexpected response shape>")
+
+    if not content or not str(content).strip():
+        return ParseResult.fail("empty", excerpt="<empty model reply>")
+
+    return parse_critique(str(content))
 
 
 # ============================================================================
@@ -99,11 +173,12 @@ def process_entry(entry: dict, model: str, api_key: str) -> dict:
     excerpt attached for debugging.
     """
     image_path = entry["image_path"]
-    prompt = entry["prompt"]
+    diagram_prompt = entry["prompt"]
     answer_key = entry["answer_key"]
     entry_id = entry.get("id", "<unknown>")
 
-    parse_result = critique_image(image_path, prompt, model, api_key)
+    critique_prompt = build_critique_prompt(diagram_prompt, answer_key)
+    parse_result = critique_image(image_path, critique_prompt, model, api_key)
 
     if parse_result.failed:
         return {
